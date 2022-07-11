@@ -1,6 +1,6 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__all__ = ["hubspot_connector"]
+__all__ = ["hubspotconnector"]
 
-from .hubspot_connector import HubspotConnector
+from .hubspotconnector import HubspotConnector

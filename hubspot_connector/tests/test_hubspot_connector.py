@@ -19,7 +19,7 @@ sys.path.insert(0, "/var/www/projects/hubspot_connector")
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 logger = logging.getLogger()
 
-from hubspot_connector import HubspotConnector
+from hubspotconnector import HubspotConnector
 
 class HubspotConnectorTest(unittest.TestCase):
     def setUp(self):
