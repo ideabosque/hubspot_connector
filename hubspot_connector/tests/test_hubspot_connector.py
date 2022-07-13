@@ -21,6 +21,7 @@ logger = logging.getLogger()
 
 from hubspot_connector import HubspotConnector
 
+
 class HubspotConnectorTest(unittest.TestCase):
     def setUp(self):
         self.hubspot_connector = HubspotConnector(logger, setting)
@@ -40,13 +41,15 @@ class HubspotConnectorTest(unittest.TestCase):
                     "r",
                 )
             )
-            self.hubspot_connector.insert_update_contact(contact_properties, id_property="email")
+            id = self.hubspot_connector.insert_update_contact(
+                contact_properties, id_property="email"
+            )
+            logger.info(f"contact id: {id}")
             logger.info(f"Finished at {time.strftime('%X')}")
         except Exception:
             log = traceback.format_exc()
             logger.exception(log)
 
-    
     @unittest.skip("demonstrating skipping")
     def test_insert_update_company(self):
         try:
@@ -57,7 +60,10 @@ class HubspotConnectorTest(unittest.TestCase):
                     "r",
                 )
             )
-            self.hubspot_connector.insert_update_company(contact_properties, id_property="netsuite_company_id")
+            id = self.hubspot_connector.insert_update_company(
+                contact_properties, id_property="netsuite_company_id"
+            )
+            logger.info(f"company id: {id}")
             logger.info(f"Finished at {time.strftime('%X')}")
         except Exception:
             log = traceback.format_exc()
@@ -73,10 +79,15 @@ class HubspotConnectorTest(unittest.TestCase):
                     "r",
                 )
             )
-            self.hubspot_connector.insert_update_product(contact_properties, id_property="hs_sku")
+            id = self.hubspot_connector.insert_update_product(
+                contact_properties, id_property="hs_sku"
+            )
+            logger.info(f"product id: {id}")
             logger.info(f"Finished at {time.strftime('%X')}")
         except Exception:
             log = traceback.format_exc()
             logger.exception(log)
+
+
 if __name__ == "__main__":
     unittest.main()
