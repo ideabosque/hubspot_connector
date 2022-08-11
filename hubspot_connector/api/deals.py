@@ -26,7 +26,7 @@ class Deals(object):
             return api_response
         except ApiException as e:
             self.logger.error(e)
-            return None
+            raise Exception(e)
 
     def update(self, netsuite_company_id, properties, **params):
         try:
@@ -42,4 +42,4 @@ class Deals(object):
             return api_response
         except ApiException as e:
             self.logger.error(e)
-            return None
+            raise Exception(e)

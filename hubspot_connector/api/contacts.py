@@ -26,7 +26,7 @@ class Contacts(object):
             return api_response
         except ApiException as e:
             self.logger.error(e)
-            return None
+            raise Exception(e)
 
     def update(self, email, properties, **params):
         try:
@@ -42,4 +42,4 @@ class Contacts(object):
             return api_response
         except ApiException as e:
             self.logger.error(e)
-            return None
+            raise Exception(e)
