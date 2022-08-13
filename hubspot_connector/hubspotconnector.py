@@ -5,10 +5,10 @@ from __future__ import print_function
 __author__ = "jeffreyw"
 
 from hubspot import HubSpot
-from hubspot_connector.api.contacts import Contacts
-from hubspot_connector.api.companies import Companies
-from hubspot_connector.api.deals import Deals
-from hubspot_connector.api.products import Products
+from .api.contacts import Contacts
+from .api.companies import Companies
+from .api.deals import Deals
+from .api.products import Products
 
 
 class HubspotConnector(object):
