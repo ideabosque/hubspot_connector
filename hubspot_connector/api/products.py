@@ -8,8 +8,8 @@ class Products(object):
 
     def get(self, product_id, **params):
         try:
-            company_fetched = self.api_client.crm.products.basic_api.get_by_id(product_id, **params)
-            return company_fetched
+            product_fetched = self.api_client.crm.products.basic_api.get_by_id(product_id, **params)
+            return product_fetched
         except ApiException as e:
             self.logger.error(e)
             return None

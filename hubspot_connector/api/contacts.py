@@ -43,3 +43,16 @@ class Contacts(object):
         except ApiException as e:
             self.logger.error(e)
             raise Exception(e)
+
+    def create_association(self, contact_id, to_object_type, to_object_id, association_type):
+        try:
+            api_response = self.api_client.crm.contacts.associations_api.create(
+                contact_id=contact_id,
+                to_object_type=to_object_type,
+                to_object_id=to_object_id,
+                association_type=association_type
+            )
+            return api_response
+        except ApiException as e:
+            self.logger.error(e)
+            raise Exception(e)

@@ -1,15 +1,15 @@
-from hubspot.crm.companies import SimplePublicObjectInput
-from hubspot.crm.companies.exceptions import ApiException
+from hubspot.crm.line_items import SimplePublicObjectInput
+from hubspot.crm.line_items.exceptions import ApiException
 
-class Companies(object):
+class LineItems(object):
     def __init__(self, logger, api_client):
         self.api_client = api_client
         self.logger = logger
 
-    def get(self, company_id, **params):
+    def get(self, line_item_id, **params):
         try:
-            company_fetched = self.api_client.crm.companies.basic_api.get_by_id(company_id, **params)
-            return company_fetched
+            line_item_fetched = self.api_client.crm.line_items.basic_api.get_by_id(line_item_id, **params)
+            return line_item_fetched
         except ApiException as e:
             self.logger.error(e)
             return None
@@ -19,7 +19,7 @@ class Companies(object):
             simple_public_object_input = SimplePublicObjectInput(
                 properties=properties
             )
-            api_response = self.api_client.crm.companies.basic_api.create(
+            api_response = self.api_client.crm.line_items.basic_api.create(
                 simple_public_object_input=simple_public_object_input,
                 **params
             )
@@ -28,14 +28,14 @@ class Companies(object):
             self.logger.error(e)
             raise Exception(e)
 
-    def update(self, company_id, properties, **params):
+    def update(self, line_item_id, properties, **params):
         try:
 
             simple_public_object_input = SimplePublicObjectInput(
                 properties=properties
             )
-            api_response = self.api_client.crm.companies.basic_api.update(
-                company_id=company_id,
+            api_response = self.api_client.crm.line_items.basic_api.update(
+                line_item_id=line_item_id,
                 simple_public_object_input=simple_public_object_input,
                 **params
             )
@@ -44,11 +44,10 @@ class Companies(object):
             self.logger.error(e)
             raise Exception(e)
 
-
-    def create_association(self, company_id, to_object_type, to_object_id, association_type):
+    def create_association(self, line_item_id, to_object_type, to_object_id, association_type):
         try:
-            api_response = self.api_client.crm.companies.associations_api.create(
-                company_id=company_id,
+            api_response = self.api_client.crm.line_items.associations_api.create(
+                line_item_id=line_item_id,
                 to_object_type=to_object_type,
                 to_object_id=to_object_id,
                 association_type=association_type
