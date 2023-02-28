@@ -10,6 +10,7 @@ from .api.companies import Companies
 from .api.deals import Deals
 from .api.products import Products
 from .api.line_items import LineItems
+from .api.owners import Owners
 
 
 class HubspotConnector(object):
@@ -196,6 +197,23 @@ class HubspotConnector(object):
             properties["price"] = price
             result = api_line_items.update(line_item_id=exist_line_item.id, properties=properties)
         return result.id
+    
+    def get_all_owners(self):
+        api_owners = Owners(self.logger, self.hubspot)
+        params = {
+            "limit": 200
+        }
+        api_response = api_owners.get_page(**params)
+        owners = api_response.results
+        paging = api_response.paging
+        if paging is not None:
+            while paging is not None:
+                params["after"] = paging.next.after
+                next_page = api_owners.get_page(**params)
+                paging = next_page.paging
+                owners = owners + next_page.results
+        return owners
+        
 
 
         
