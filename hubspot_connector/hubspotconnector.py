@@ -51,13 +51,14 @@ class HubspotConnector(object):
             result = api_contacts.update(contact_id, properties, **params)
         return result.id
 
-    def get_contact(self, contact_id, id_property=None):
+    def get_contact(self, contact_id, id_property=None, properties=[]):
         if not contact_id:
             raise Exception(f"contact_id can not be empty")
         params = {}
         if id_property is not None:
             params["id_property"] = id_property
-        
+        if len(properties) > 0:
+            params["properties"] = properties
         api_contacts = Contacts(self.logger, self.hubspot)
         exist_contact = api_contacts.get(contact_id, **params)
         return exist_contact
@@ -116,12 +117,14 @@ class HubspotConnector(object):
             result = api_deals.update(deal_id, properties, **params)
         return result.id
 
-    def get_deal(self, deal_id, id_property=None):
+    def get_deal(self, deal_id, properties=[], id_property=None):
         if not deal_id:
             raise Exception(f"The field deal_id can not be empty")
         params = {}
         if id_property is not None:
             params["id_property"] = id_property
+        if len(properties) > 0:
+            params["properties"] = properties
         api_deals = Deals(self.logger, self.hubspot)
         exist_deal = api_deals.get(deal_id, **params)
         return exist_deal
@@ -174,6 +177,22 @@ class HubspotConnector(object):
         api_line_items = LineItems(self.logger, self.hubspot)
         return api_line_items.create_association(line_item_id=line_item_id, to_object_type="deal", to_object_id=deal_id, association_type="line_item_to_deal")
 
+    def get_line_item(self, line_item_id, id_property=None, associations=[], properties=[], properties_with_history=[]):
+        if not line_item_id:
+            raise Exception(f"The field line_item_id can not be empty")
+        api_line_items = LineItems(self.logger, self.hubspot)
+        params = {}
+        if id_property is not None:
+            params["id_property"] = id_property
+        if len(associations) > 0:
+            params["associations"] = associations
+        if len(properties) > 0:
+            params["properties"] = properties
+        if len(properties_with_history) > 0:
+            params["properties_with_history"] = properties_with_history
+        exist_line_item = api_line_items.get(line_item_id=line_item_id, **params)
+        return exist_line_item
+    
     def insert_update_line_item(self, hs_product, quantity, price, associations=[]):
         api_line_items = LineItems(self.logger, self.hubspot)
         params = {
@@ -213,9 +232,59 @@ class HubspotConnector(object):
                 paging = next_page.paging
                 owners = owners + next_page.results
         return owners
-        
+    
+    def get_deals(self, **params):
+        count_only = params.pop("count_only", False)
+        filter_groups = params.pop("filter_groups", None)
+        sorts = params.pop("sorts", None)
+        query = params.pop("query", None)
+        properties = params.pop("properties", None)
+        limit = params.pop("limit", 20)
+        after = params.pop("after", None)
 
+        first_deal_response = self.search_deals(filter_groups=filter_groups, sorts=sorts, query=query, properties=properties,limit=limit, after=after, **params)
+        if count_only:
+            return first_deal_response.total
+        deals = [
+            deal.properties
+            for deal in first_deal_response.results
+        ]
+        paging = first_deal_response.paging
+        if paging is not None:
+            count = 1
+            after = None
+            while paging is not None:
+                after = paging.next.after
+                next_page = self.search_deals(filter_groups=filter_groups, properties=properties, limit=limit, sorts=sorts, after=after, **params)
+                paging = next_page.paging
+                next_deals = next_page.results
+                count = count + 1
+                for n_deal in next_deals:
+                    deals.append(n_deal.properties)
 
+        return deals
+    
+    def search_deals(self, filter_groups=None, sorts=None, query=None, properties=None, limit=20, after=None, **kwargs):
+        api_deals = Deals(self.logger, self.hubspot)
+        return api_deals.do_search(filter_groups=filter_groups,sorts=sorts, query=query, properties=properties, limit=limit, after=after, **kwargs)
+
+    def update_deal(self, properties, id_property=None):
+        if id_property is not None and not properties.get(id_property, None):
+            raise Exception(f"The field {id_property} can not be empty")
+        params = {}
+        if id_property is not None:
+            deal_id = properties.get(id_property)
+            params["id_property"] = id_property
+        else:
+            deal_id = properties.pop("hs_object_id")
+            
+        api_deals = Deals(self.logger, self.hubspot)
+        # exist_deal = api_deals.get(deal_id, **params)
+        # if exist_deal is None:
+        #     result = api_deals.create(properties)
+        # else:
+        result = api_deals.update(deal_id, properties, **params)
+        return result.id
         
 
 

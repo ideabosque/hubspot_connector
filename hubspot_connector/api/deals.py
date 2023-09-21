@@ -1,4 +1,4 @@
-from hubspot.crm.deals import SimplePublicObjectInput
+from hubspot.crm.deals import SimplePublicObjectInput, PublicObjectSearchRequest
 from hubspot.crm.deals.exceptions import ApiException
 
 class Deals(object):
@@ -62,6 +62,25 @@ class Deals(object):
                 to_object_type=to_object_type,
                 to_object_id=to_object_id,
                 association_type=association_type
+            )
+            return api_response
+        except ApiException as e:
+            self.logger.error(e)
+            raise Exception(e)
+        
+    def do_search(self,filter_groups=None, sorts=None, query=None, properties=None, limit=20, after=None, **kwargs):
+        try:
+            public_object_search_request = PublicObjectSearchRequest(
+                filter_groups=filter_groups,
+                sorts=sorts,
+                query=query,
+                properties=properties,
+                limit=limit,
+                after=after
+            )
+            api_response = self.api_client.crm.deals.search_api.do_search(
+                public_object_search_request=public_object_search_request,
+                **kwargs
             )
             return api_response
         except ApiException as e:
