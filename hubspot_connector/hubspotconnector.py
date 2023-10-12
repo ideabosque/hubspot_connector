@@ -85,17 +85,56 @@ class HubspotConnector(object):
             result = api_companies.update(company_id, properties, **params)
         return result.id
 
-    def get_company(self, company_id, id_property=None):
+    def get_company(self, company_id, id_property=None, properties=[]):
         if not company_id:
             raise Exception(f"company_id can not be empty")
         params = {}
         if id_property is not None:
             params["id_property"] = id_property
-        
+        if len(properties) > 0:
+            params["properties"] = properties
         api_companies = Companies(self.logger, self.hubspot)
         exist_company = api_companies.get(company_id, **params)
         return exist_company
 
+    def get_companies(self, **params):
+        count_only = params.pop("count_only", False)
+        filter_groups = params.pop("filter_groups", None)
+        sorts = params.pop("sorts", None)
+        query = params.pop("query", None)
+        properties = params.pop("properties", None)
+        limit = params.pop("limit", 20)
+        after = params.pop("after", None)
+        limit_count = params.pop("limit_count", 100)
+        first_result_response = self.search_companies(filter_groups=filter_groups, sorts=sorts, query=query, properties=properties,limit=limit, after=after, **params)
+        if count_only:
+            return first_result_response.total
+        count = 0
+        companies = []
+        for company in first_result_response.results:
+            companies.append(company.properties)
+            count = count + 1
+        paging = first_result_response.paging
+        if paging is not None:
+            after = None
+            while paging is not None:
+                after = paging.next.after
+                next_page = self.search_companies(filter_groups=filter_groups, properties=properties, limit=limit, sorts=sorts, after=after, **params)
+                paging = next_page.paging
+                next_results = next_page.results
+                for n_company in next_results:
+                    
+                    companies.append(n_company.properties)
+                    count = count + 1
+                    if count >= limit_count:
+                        paging = None
+
+        return companies
+    
+    def search_companies(self, filter_groups=None, sorts=None, query=None, properties=None, limit=20, after=None, **kwargs):
+        api_company = Companies(self.logger, self.hubspot)
+        return api_company.do_search(filter_groups=filter_groups,sorts=sorts, query=query, properties=properties, limit=limit, after=after, **kwargs)
+    
     def associate_company_deal(self, company_id, deal_id):
         api_companies = Companies(self.logger, self.hubspot)
         return api_companies.create_association(company_id=company_id, to_object_type="deal", to_object_id=deal_id, association_type=6)
@@ -217,6 +256,11 @@ class HubspotConnector(object):
             result = api_line_items.update(line_item_id=exist_line_item.id, properties=properties)
         return result.id
     
+    def update_line_item(self, line_item_id, properties):
+        api_line_items = LineItems(self.logger, self.hubspot)
+        result = api_line_items.update(line_item_id=line_item_id, properties=properties)
+        return result.id
+
     def get_all_owners(self):
         api_owners = Owners(self.logger, self.hubspot)
         params = {
@@ -240,18 +284,23 @@ class HubspotConnector(object):
         query = params.pop("query", None)
         properties = params.pop("properties", None)
         limit = params.pop("limit", 20)
+        limit_count = params.pop("limit_count", 100)
         after = params.pop("after", None)
 
         first_deal_response = self.search_deals(filter_groups=filter_groups, sorts=sorts, query=query, properties=properties,limit=limit, after=after, **params)
         if count_only:
             return first_deal_response.total
+        count = 0
+        deals = []
+        for deal in first_deal_response.results:
+            deals.append(deal.properties)
+            count = count + 1
         deals = [
             deal.properties
             for deal in first_deal_response.results
         ]
         paging = first_deal_response.paging
         if paging is not None:
-            count = 1
             after = None
             while paging is not None:
                 after = paging.next.after
@@ -261,6 +310,9 @@ class HubspotConnector(object):
                 count = count + 1
                 for n_deal in next_deals:
                     deals.append(n_deal.properties)
+                    count = count + 1
+                    if count >= limit_count:
+                        paging = None
 
         return deals
     
