@@ -4,6 +4,7 @@ from __future__ import print_function
 
 __author__ = "jeffreyw"
 
+import copy, time
 from hubspot import HubSpot
 from .api.contacts import Contacts
 from .api.companies import Companies
@@ -337,7 +338,38 @@ class HubspotConnector(object):
         # else:
         result = api_deals.update(deal_id, properties, **params)
         return result.id
+    
+    def get_deleted_companies(self):
+        api_company = Companies(self.logger, self.hubspot)
+        limit = 100
+        page_count = 1
+        first_result_response = api_company.get_companies_by_page(limit=limit, archived=True)
+        companies = []
+        for company in first_result_response.results:
+            companies.append(self.format_hubspot_object(company))
+        page_count = 1
+        paging = first_result_response.paging
+        if paging is not None:
+            after = None
+            while paging is not None:
+                if page_count % 5 == 0:
+                    time.sleep(2)
+                after = paging.next.after
+                next_page = api_company.get_companies_by_page(limit=limit, after=after, archived=True)
+                paging = next_page.paging
+                next_companies = next_page.results
+                for n_company in next_companies:
+                    companies.append(self.format_hubspot_object(n_company))
+                page_count = page_count + 1
+        return companies
         
-
+    def format_hubspot_object(self, hubspot_object):
+        new_object = hubspot_object.to_dict()
+        properties = new_object.pop("properties", {})
+        new_object = dict(
+            new_object,
+            **properties
+        )
+        return new_object
 
 

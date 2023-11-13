@@ -76,3 +76,19 @@ class Companies(object):
         except ApiException as e:
             self.logger.error(e)
             raise Exception(e)
+        
+    def get_companies_by_page(self, limit=100, after=None, archived=False, properties=[], properties_with_history=[], associations=[]):
+        try:
+            params = {
+                "limit": limit,
+                "after": after,
+                "archived": archived,
+                "properties": properties,
+                "properties_with_history": properties_with_history,
+                "associations": associations
+            }
+            api_response = self.api_client.crm.companies.basic_api.get_page(**params)
+            return api_response
+        except ApiException as e:
+            self.logger.error(e)
+            raise Exception(e)
