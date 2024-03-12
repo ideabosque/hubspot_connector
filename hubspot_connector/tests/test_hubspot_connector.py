@@ -99,6 +99,18 @@ class HubspotConnectorTest(unittest.TestCase):
             log = traceback.format_exc()
             logger.exception(log)
 
+    # @unittest.skip("demonstrating skipping")
+    def test_get_contact_primary_company(self):
+        try:
+            kwargs = {}
+            response = self.hubspot_connector.get_contact_primary_company(contact_id=5451)
+            print(response)
+            response = self.hubspot_connector.hubspot.crm.associations.associations_api.get_by_id(owner_id=43868916, **kwargs)
+            
+        except Exception:
+            log = traceback.format_exc()
+            logger.exception(log)
+
     @unittest.skip("demonstrating skipping")
     def test_get_options(self):
         try:
@@ -130,10 +142,59 @@ class HubspotConnectorTest(unittest.TestCase):
             log = traceback.format_exc()
             logger.exception(log)
 
-    # @unittest.skip("demonstrating skipping")
+    @unittest.skip("demonstrating skipping")
     def test_get_deal(self):
         deal = self.hubspot_connector.get_deal(deal_id="SO-GWI-99020", id_property="deal_number", properties=["notes_last_contacted"])
         print(deal)
+
+    @unittest.skip("demonstrating skipping")
+    def test_get_companies_total(self):
+        params = {
+            "count_only": True
+        }
+        total = self.hubspot_connector.get_companies(**params)
+        print(total)
+        params["filter_groups"] = [
+            {
+                "filters": [
+                    {
+                        "value": False,
+                        "propertyName": "archived",
+                        "operator": "EQ"
+                    }
+                    
+                ]
+            }
+        ]
+        total = self.hubspot_connector.get_companies(**params)
+        print(total)
+
+    @unittest.skip("demonstrating skipping")
+    def test_get_contacts_total(self):
+        params = {
+            "count_only": True
+        }
+        total = self.hubspot_connector.get_contacts(**params)
+        print(total)
+        params["filter_groups"] = [
+            {
+                "filters": [
+                    {
+                        "value": False,
+                        "propertyName": "hs",
+                        "operator": "EQ"
+                    }
+                    
+                ]
+            }
+        ]
+        total = self.hubspot_connector.get_companies(**params)
+        print(total)
+
+    @unittest.skip("demonstrating skipping")
+    def test_get_deleted_companies(self):
+        response = self.hubspot_connector.get_deleted_companies()
+        print(response)
 
     @unittest.skip("demonstrating skipping")
     def test_get_deal_line_item(self):
