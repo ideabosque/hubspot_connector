@@ -15,6 +15,7 @@ from .api.line_items import LineItems
 from .api.owners import Owners
 from .api.notes import Notes
 from .api.files import Files
+from .api.properties import Properties
 
 class HubspotConnector(object):
     def __init__(self, logger, settings):
@@ -143,6 +144,24 @@ class HubspotConnector(object):
             result = api_companies.update(company_id, properties, **params)
         return result.id
 
+    def update_company(self, properties, id_property=None):
+        if id_property is not None and not properties.get(id_property, None):
+            raise Exception(f"The field {id_property} can not be empty")
+        params = {}
+        if id_property is not None:
+            company_id = properties.get(id_property)
+            params["id_property"] = id_property
+        else:
+            company_id = properties.pop("hs_object_id")
+        api_companies = Companies(self.logger, self.hubspot)
+        exist_company = api_companies.get(company_id, **params)
+
+        if exist_company is None:
+            raise Exception(f"Company({company_id}) does not exists.")
+        else:
+            result = api_companies.update(company_id, properties, **params)
+        return result.id
+    
     def get_company(self, company_id, id_property=None, properties=[]):
         if not company_id:
             raise Exception(f"company_id can not be empty")
@@ -321,6 +340,7 @@ class HubspotConnector(object):
 
     def get_all_owners(self):
         api_owners = Owners(self.logger, self.hubspot)
+
         params = {
             "limit": 200
         }
@@ -331,6 +351,21 @@ class HubspotConnector(object):
             while paging is not None:
                 params["after"] = paging.next.after
                 next_page = api_owners.get_page(**params)
+                paging = next_page.paging
+                owners = owners + next_page.results
+
+        archived_params = {
+            "limit": 200,
+            "archived": True
+        }
+
+        api_response = api_owners.get_page(**archived_params)
+        owners = owners + api_response.results
+        paging = api_response.paging
+        if paging is not None:
+            while paging is not None:
+                params["after"] = paging.next.after
+                next_page = api_owners.get_page(**archived_params)
                 paging = next_page.paging
                 owners = owners + next_page.results
         return owners
@@ -457,4 +492,8 @@ class HubspotConnector(object):
         exist_file_with_signed_url = api_files.get_signed_url(file_id, **params)
         return exist_file_with_signed_url
 
-
+    def get_properties_by_object_type(self, object_type, properties=None):
+        params = {}
+        api_properties = Properties(self.logger, self.hubspot)
+        api_response = api_properties.read_batch(object_type, properties, **params)
+        return api_response
