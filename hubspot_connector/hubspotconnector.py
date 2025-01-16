@@ -347,27 +347,39 @@ class HubspotConnector(object):
         api_response = api_owners.get_page(**params)
         owners = api_response.results
         paging = api_response.paging
+
         if paging is not None:
+            after = paging.next.after
             while paging is not None:
                 params["after"] = paging.next.after
                 next_page = api_owners.get_page(**params)
                 paging = next_page.paging
                 owners = owners + next_page.results
+                if paging is not None and after == paging.next.after:
+                    break
+
+                if paging is not None:
+                     after = paging.next.after
 
         archived_params = {
             "limit": 200,
             "archived": True
         }
-
         api_response = api_owners.get_page(**archived_params)
         owners = owners + api_response.results
         paging = api_response.paging
+
         if paging is not None:
+            after = paging.next.after
             while paging is not None:
                 params["after"] = paging.next.after
                 next_page = api_owners.get_page(**archived_params)
                 paging = next_page.paging
                 owners = owners + next_page.results
+                if paging is not None and after == paging.next.after:
+                    break
+                if paging is not None:
+                     after = paging.next.after
         return owners
     
     def get_deals(self, **params):
@@ -452,6 +464,8 @@ class HubspotConnector(object):
                 next_companies = next_page.results
                 for n_company in next_companies:
                     companies.append(self.format_hubspot_object(n_company))
+                if paging is not None and after == paging.next.after:
+                    break
                 page_count = page_count + 1
         return companies
         
