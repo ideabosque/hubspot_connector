@@ -6,6 +6,7 @@ from urllib3.util.retry import Retry
 __author__ = "jeffreyw"
 
 import copy, time
+from datetime import datetime
 from hubspot import HubSpot
 from .api.contacts import Contacts
 from .api.companies import Companies
@@ -22,6 +23,7 @@ class HubspotConnector(object):
         self.HUBSPOT_ACCESS_TOKEN = settings.get("hubspot_access_token")
         self._api_client = None
         self.logger = logger
+        self.settings = settings
 
     def connect(self):
         try:
@@ -53,11 +55,14 @@ class HubspotConnector(object):
             contact_id = properties.get("hs_object_id")
         api_contacts = Contacts(self.logger, self.hubspot)
         exist_contact = api_contacts.get(contact_id, **params)
-
+        attachmets = properties.pop("attachmets", [])
         if exist_contact is None:
             result = api_contacts.create(properties)
         else:
             result = api_contacts.update(contact_id, properties, **params)
+        if len(attachmets) > 0:
+            for attachment in attachmets:
+                self.attach_file_to_contact(contact_id=result.id, **attachment)
         return result.id
 
     def get_contact(self, contact_id, id_property=None, properties=[]):
@@ -511,3 +516,178 @@ class HubspotConnector(object):
         api_properties = Properties(self.logger, self.hubspot)
         api_response = api_properties.read_batch(object_type, properties, **params)
         return api_response
+    
+    def upload_file(self, file_content, folder_path, options):
+        params = {}
+        params["file"] = file_content
+        params["folder_path"] = folder_path
+        params["options"] = options
+        api_files = Files(self.logger, self.hubspot)
+        api_response = api_files.upload(**params)
+        return api_response
+    
+    def import_file_from_url(self, params):
+        
+        api_files = Files(self.logger, self.hubspot)
+        api_response = api_files.import_from_url(**params)
+        return api_response
+    
+    
+    def create_note(self, properties={}):
+        api_notes = Notes(self.logger, self.hubspot)
+        exist_note = api_notes.create(properties)
+        return exist_note
+    
+    def association_note_to_contact(self, note_id, contact_id):
+        api_notes = Notes(self.logger, self.hubspot)
+        api_response = api_notes.create_association(note_id=note_id, to_object_type="contact", to_object_id=contact_id, association_type="note_to_contact")
+        return api_response
+
+    def lookup_crm_user_list(self, logger, **kwargs):
+        address = kwargs.get("address", "")
+        page_size = kwargs.get("page_size", 100)
+        page_number = kwargs.get("page_number", 0)
+        total = 0
+
+        result = {
+            "page_size": page_size,
+            "page_number": page_number,
+            "total": total,
+            "crm_user_list": []
+        }
+        try:
+            response = self.search_contacts_by_address(address=address, limit=page_size)
+            result["total"] = response.total
+            for contact in response.results:
+                result["crm_user_list"].append(
+                    {
+                        "email": contact.properties.get("email"),
+                        "first_name": contact.properties.get("firstname"),
+                        "last_name": contact.properties.get("lastname")
+                    }
+                )
+        except Exception as e:
+            pass
+        
+        return result
+    
+    def search_contacts_by_address(self, address, limit, after=None):
+        formated_address = self.format_address(address)
+        filter_groups = [
+            {
+                "filters": [
+                    {
+                        "value": formated_address.get("country"),
+                        "propertyName": "country",
+                        "operator": "EQ"
+                    },
+                    {
+                        "value": formated_address.get("state_code"),
+                        "propertyName": "hs_state_code",
+                        "operator": "EQ"
+                    },
+                    {
+                        "value": formated_address.get("address"),
+                        "propertyName": "address",
+                        "operator": "CONTAINS_TOKEN"
+                    }
+                ]
+            },
+            {
+                "filters": [
+                    {
+                        "value": formated_address.get("country"),
+                        "propertyName": "country",
+                        "operator": "EQ"
+                    },
+                    {
+                        "value": formated_address.get("zip"),
+                        "propertyName": "zip",
+                        "operator": "EQ"
+                    },
+                    {
+                        "value": formated_address.get("address"),
+                        "propertyName": "address",
+                        "operator": "CONTAINS_TOKEN"
+                    }
+                ]
+            },
+            {
+                "filters": [
+                    {
+                        "value": formated_address.get("country"),
+                        "propertyName": "country",
+                        "operator": "EQ"
+                    },
+                    {
+                        "value": formated_address.get("city"),
+                        "propertyName": "city",
+                        "operator": "EQ"
+                    },
+                    {
+                        "value": formated_address.get("address"),
+                        "propertyName": "address",
+                        "operator": "CONTAINS_TOKEN"
+                    }
+                ]
+            },
+        ]
+        return self.search_contacts(filter_groups=filter_groups, sorts=None, query=None, properties=None, limit=limit, after=after, **{})
+        
+
+    def format_address(self, address):
+        address_arr = address.split(",")
+        country = address_arr[-1].strip()
+        state_code_and_postcode = address_arr[-2].strip()
+        state_code_and_postcode_arr = state_code_and_postcode.strip().split(" ")
+        state_code = state_code_and_postcode_arr[0].strip()
+        post_code = state_code_and_postcode_arr[1].strip()
+        city = address_arr[-3].strip()
+        street_address = " ".join(address_arr[:-3]).strip()
+        return {
+            "country": country,
+            "state_code": state_code,
+            "zip": post_code,
+            "city": city,
+            "address": street_address
+        }
+
+    def attach_file_to_contact(self, contact_id, **file_params):
+        file_id = None
+        if file_params.get("url"):
+            try:
+                api_files = Files(self.logger, self.hubspot)
+                params = {
+                    "access": file_params.get("access", "PRIVATE"),
+                    "url": file_params.get("url"),
+                    "folder_path": file_params.get("folder_path","/attachments"),
+                    "overwrite": file_params.get("overwrite", False),
+                }
+                anysc_import_response = api_files.import_from_url(**params)
+                task_id = anysc_import_response.id
+                wait_limit = int(self.settings.get("import_file_wait_limit", 30))
+                wait_count = 0
+                while file_id is None and wait_count < wait_limit:
+                    task_status = api_files.check_import_status(task_id)
+                    if task_status.status == "COMPLETE":
+                        if task_status.errors is not None and len(task_status.errors) > 0:
+                            self.logger.error(task_status.errors)
+                            break
+                        if task_status.result is not None and task_status.result.id:
+                            file_id = task_status.result.id
+                    wait_count += 1
+                    time.sleep(1)
+            except Exception as e:
+                self.logger.error(e)
+                pass
+            
+        if file_id is not None:
+            note_properties = {
+                "hs_timestamp": int(datetime.now().timestamp()) * 1000,
+                "hs_note_body": file_params.get("note"),
+                "hs_attachment_ids": str(file_id)
+            }
+            note = self.create_note(note_properties)
+            note_id = note.id
+            result = self.association_note_to_contact(note_id=note_id, contact_id=contact_id)
+        return
