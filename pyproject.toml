@@ -1,0 +1,30 @@
+[tool.poetry]
+name = "Hubspot-Connector"
+version = "0.0.1"
+description = "Use to connect Hubspot API."
+authors = ["Idea Bosque <ideabosque@gmail.com>"]
+license = "MIT"
+classifiers = [
+    "Programming Language :: Python",
+    "Environment :: Web Environment",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+readme = "README.md"
+homepage = "https://github.com/ideabosque/hubspot_connector"
+repository = "https://github.com/ideabosque/hubspot_connector"
+include = [
+    "LICENSE",
+]
+
+[tool.poetry.dependencies]
+python = "^3.6"
+hubspot-api-client = "^6.0.0"
+
+[tool.poetry.dev-dependencies]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
