@@ -55,13 +55,13 @@ class HubspotConnector(object):
             contact_id = properties.get("hs_object_id")
         api_contacts = Contacts(self.logger, self.hubspot)
         exist_contact = api_contacts.get(contact_id, **params)
-        attachmets = properties.pop("attachmets", [])
+        attachments = properties.pop("attachments", [])
         if exist_contact is None:
             result = api_contacts.create(properties)
         else:
             result = api_contacts.update(contact_id, properties, **params)
-        if len(attachmets) > 0:
-            for attachment in attachmets:
+        if len(attachments) > 0:
+            for attachment in attachments:
                 self.attach_file_to_contact(contact_id=result.id, **attachment)
         return result.id
 
@@ -691,3 +691,34 @@ class HubspotConnector(object):
             note_id = note.id
             result = self.association_note_to_contact(note_id=note_id, contact_id=contact_id)
         return
+    
+    def upload_file_by_url(self, **file_params):
+        file_id = None
+        if file_params.get("url"):
+            try:
+                api_files = Files(self.logger, self.hubspot)
+                params = {
+                    "access": file_params.get("access", "PRIVATE"),
+                    "url": file_params.get("url"),
+                    "folder_path": file_params.get("folder_path","/attachments"),
+                    "overwrite": file_params.get("overwrite", False),
+                }
+                anysc_import_response = api_files.import_from_url(**params)
+                task_id = anysc_import_response.id
+                wait_limit = int(self.settings.get("import_file_wait_limit", 30))
+                wait_count = 0
+                while file_id is None and wait_count < wait_limit:
+                    task_status = api_files.check_import_status(task_id)
+                    if task_status.status == "COMPLETE":
+                        if task_status.errors is not None and len(task_status.errors) > 0:
+                            self.logger.error(task_status.errors)
+                            break
+                        if task_status.result is not None and task_status.result.id:
+                            file_id = task_status.result.id
+                    wait_count += 1
+                    time.sleep(1)
+            except Exception as e:
+                self.logger.error(e)
+                pass
+
+        return file_id
