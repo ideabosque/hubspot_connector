@@ -514,7 +514,10 @@ class HubspotConnector(object):
     def get_properties_by_object_type(self, object_type, properties=None):
         params = {}
         api_properties = Properties(self.logger, self.hubspot)
-        api_response = api_properties.read_batch(object_type, properties, **params)
+        if properties is None:
+            api_response = api_properties.get_all(object_type, **params)
+        else:
+            api_response = api_properties.read_batch(object_type, properties, **params)
         return api_response
     
     def upload_file(self, file_content, folder_path, options):
