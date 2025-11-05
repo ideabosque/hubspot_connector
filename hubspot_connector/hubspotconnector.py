@@ -5,7 +5,7 @@ from urllib3.util.retry import Retry
 
 __author__ = "jeffreyw"
 
-import copy, time
+import copy, time, json
 from datetime import datetime
 from hubspot import HubSpot
 from .api.contacts import Contacts
@@ -706,6 +706,8 @@ class HubspotConnector(object):
                     "folder_path": file_params.get("folder_path","/attachments"),
                     "overwrite": file_params.get("overwrite", False),
                 }
+                if file_params.get("name"):
+                    params["name"] = file_params.get("name")
                 anysc_import_response = api_files.import_from_url(**params)
                 task_id = anysc_import_response.id
                 wait_limit = int(self.settings.get("import_file_wait_limit", 30))
@@ -720,6 +722,32 @@ class HubspotConnector(object):
                             file_id = task_status.result.id
                     wait_count += 1
                     time.sleep(1)
+            except Exception as e:
+                self.logger.error(e)
+                pass
+
+        return file_id
+
+    def upload_file(self, **file_params):
+        file_id = None
+        if file_params.get("file"):
+            try:
+                api_files = Files(self.logger, self.hubspot)
+                params = {
+                    "file": file_params.get("file"),
+                    "folder_path": file_params.get("folder_path","/attachments"),
+                    # "overwrite": file_params.get("overwrite", False),
+                }
+                if file_params.get("name"):
+                    params["file_name"] = file_params.get("name")
+                options = {
+                    "access": file_params.get("access", "PRIVATE"),
+                }
+                if file_params.get("ttl"):
+                    options["ttl"] = file_params.get("ttl")
+                params["options"] = json.dumps(options)
+                file = api_files.upload(**params)
+                file_id = file.id
             except Exception as e:
                 self.logger.error(e)
                 pass
